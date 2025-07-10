@@ -8,7 +8,7 @@ with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
 
 # setup
 setup(
-    name='Bpic_analysis',
+    name='bpic_analysis',
     version='1.0',
     description='data analysis for JWST NIRSpec IFU data of B Pic',
     long_description=long_description,
@@ -24,7 +24,7 @@ setup(
         'License :: OSI Approved :: MIT License'
     ],
     keywords='jwst NIRSpec ifu BPic',
-    packages=['Bpic_analysis'],
+    packages=['bpic_analysis'],
     include_package_data=True,
     zip_safe=False
 )
