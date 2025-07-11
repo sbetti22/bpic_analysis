@@ -25,6 +25,6 @@ setup(
     ],
     keywords='jwst NIRSpec ifu BPic',
     packages=['bpic_analysis'],
-    include_package_data=True,
+    package_data={'bpic_analysis': ['*']},
     zip_safe=False
 )

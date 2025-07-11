@@ -10,6 +10,8 @@ import matplotlib.pyplot as plt
 from lmfit.models import GaussianModel
 from lmfit.models import SkewedGaussianModel
 
+import bpic_analysis.basic_plot as bplot
+
 def measure_absorbance(norm_df, icefeature, normalize=True, yerr=True, plot=False, xlabel = 'wavelength (um)', ylabel='normalized Fdisk/Fstar', ylabelerr='normalized Fdisk/Fstar err', **kwargs):
     x = norm_df['wavelength (um)']
     _, _, optical_depth, optical_depth_err = measure_optical_depth(norm_df, icefeature, yerr=yerr, plot=plot, xlabel=xlabel, ylabel=ylabel, ylabelerr=ylabelerr, **kwargs)
@@ -31,8 +33,7 @@ def measure_absorbance(norm_df, icefeature, normalize=True, yerr=True, plot=Fals
         ind = np.where((X_wn>wn_min) & (X_wn<wn_max))
         norm_absorbance = absorbance / np.nanmax(absorbance[ind])
         if yerr:
-            norm_absorbancerr = norm_absorbance * np.sqrt((absorbanceerr/absorbance)**2. + (absorbanceerr.values[ind][np.argmax(absorbance.values[ind])]/np.nanmax(absorbance.values[ind]))**2.)
-            norm_absorbancerr =  norm_absorbancerr.values
+            norm_absorbancerr = norm_absorbance * np.sqrt((absorbanceerr/absorbance)**2. + (absorbanceerr[ind][np.argmax(absorbance[ind])]/np.nanmax(absorbance[ind]))**2.)
         else:
             norm_absorbancerr = None
         return norm_absorbance, norm_absorbancerr
@@ -42,6 +43,8 @@ def measure_absorbance(norm_df, icefeature, normalize=True, yerr=True, plot=Fals
 
 def measure_optical_depth(norm_df, icefeature, yerr=True, plot=False, xlabel = 'wavelength (um)', ylabel='normalized Fdisk/Fstar', ylabelerr='normalized Fdisk/Fstar err', **kwargs):
     ylims = kwargs.get('ylims', [0,1])
+    polyfitorder = kwargs.get('polyfitorder', 4)
+    print(polyfitorder)
     if icefeature == 'H2O':
         continuum = norm_df.loc[((norm_df[xlabel]> 2.0) & 
                                         (norm_df[xlabel]< 2.6)) | 
@@ -63,7 +66,7 @@ def measure_optical_depth(norm_df, icefeature, yerr=True, plot=False, xlabel = '
                                         ((norm_df['wavelength (um)']> 4.405) & 
                                         (norm_df['wavelength (um)']< 4.5)) ]
         xmin, xmax = 4.3, 4.5
-    z = np.polyfit(continuum['wavelength (um)'], continuum[ylabel],4)
+    z = np.polyfit(continuum['wavelength (um)'], continuum[ylabel],polyfitorder)
     p = np.poly1d(z)
     optical_depth = (-np.log(norm_df[ylabel]/p(norm_df[xlabel]))).values
     if plot:
@@ -99,7 +102,7 @@ def ice_gaussian_plot(ax, norm_df, icefeature, opdepth=True, skewedgaussian=True
 
     if icefeature == 'H2O':
         wn_min, wn_max = 2800, 4000
-        guassian_wn_min, gaussian_wn_max = 3000, 3750
+        guassian_wn_min, gaussian_wn_max = 3000, 3760
         left_wn_min, left_wn_max =3000,  3511
         right_wn_min, right_wn_max =3511 , 3750
         A = 2.0e-16 #Gerakines1995
@@ -127,7 +130,7 @@ def ice_gaussian_plot(ax, norm_df, icefeature, opdepth=True, skewedgaussian=True
     else:
         raise ValueError('icefeature should be H2O, 12CO2, or 13CO2')
     
-    continuum, popt, optical_depth, optical_depth_err = measure_optical_depth(norm_df, icefeature, yerr=True, plot=False, xlabel=xlabel, ylabel=ylabel, ylabelerr = ylabelerr)
+    continuum, popt, optical_depth, optical_depth_err = measure_optical_depth(norm_df, icefeature, yerr=True, plot=False, xlabel=xlabel, ylabel=ylabel, ylabelerr = ylabelerr, **kwargs)
     IDX = np.where((X_wn > wn_min) & (X_wn < wn_max))
 
     if opdepth:
@@ -156,7 +159,7 @@ def ice_gaussian_plot(ax, norm_df, icefeature, opdepth=True, skewedgaussian=True
         xx = np.linspace(wn_min, wn_max,100)
         yeval = model.eval(result.params, x=xx)
         ax.plot(xx, yeval, color=gaussian_color, zorder=100, linestyle='--')
-        # print(result.fit_report())
+        print(result.fit_report())
 
         a = result.params['gamma'].value
         ae = result.params['gamma'].stderr
@@ -169,7 +172,7 @@ def ice_gaussian_plot(ax, norm_df, icefeature, opdepth=True, skewedgaussian=True
         m = np.sqrt(2/np.pi) * delta - (1-(np.pi/4)) * ((np.sqrt(2/np.pi)*delta)**3/(1-(2/np.pi)*delta**2.)) - (np.sign(a) / 2 ) * np.exp(-(2*np.pi)/ abs(a))
         wm = w * m
         mode = c + wm
-
+        print(a, ae)
         de = ( 1/ (1+a**2)**(3/2)) * ae
         Ae = np.sqrt(2/np.pi) * de
         Be = de * abs( ((np.pi-4) * (3*np.pi*delta**2. - 2*delta**4.)) / (np.sqrt(2*np.pi) * (np.pi - 2*delta**2.)**2.) )
@@ -246,22 +249,12 @@ def ice_gaussian_plot(ax, norm_df, icefeature, opdepth=True, skewedgaussian=True
         fwhm_err = 2.355*result.params['sigma'].stderr
     ax.axvline(mode, color='gray', linestyle=':', lw=0.5)
     
-    ax.tick_params(which='both', top=False)
-    axT = ax.secondary_xaxis('top', functions=(forward, inverse))
-    axT.tick_params(labelsize=fs)
-    if top_label:
-        axT.set_xlabel('wavelength (μm)', fontsize=fs)
-        
-    else:
-        axT.set_xticklabels([])
-    ax.set_xlabel('wavenumber (cm$^{-1}$)', fontsize=fs)
-    ax.set_xlim(wn_max, wn_min)
-    ax.set_ylim(ylim)
+    
+    bplot.plot_axes(ax, 'Optical depth (τ)', xlabel='Wavenumber (cm$^{-1}$)', fontsize=fs, ylim=ylim, xlim=(wn_max, wn_min),
+                   legend=False , top_label=top_label)
     if kwargs.get('legend'):
         ax.legend(loc ='lower left', fontsize=fs-6)  
-    if opdepth:
-        ax.set_ylabel('reverse optical depth')
-    else:
+    if opdepth == False:
         ax.set_ylabel('$F/F_\mathrm{cont.}$')
 
     peak_position_wn = mode

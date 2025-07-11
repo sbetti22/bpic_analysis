@@ -58,13 +58,7 @@ def data_mask(unit='Jy'):
         data_u[:, 70:80, 50:60] = 0
         data_u = np.ma.array(data_u, mask = mask3d)
         return data_u
-    
-def photosphere():
-    dd = '/Users/sbetti/Documents/Science/DebrisDisks/betaPic/spectral_extraction_fitting_scripts/extraction/'
-    file=dd + 'betapic_R100_photosphere_thermalexcess.txt'
-    a = np.loadtxt(file) 
-    x, photosphere_y = a[:,0], a[:,1]
-    return x, photosphere_y
+
 
 def obs_effstim_image(data_Jy, mask=True):
     new_nirspec = np.zeros((data_Jy.shape[1], data_Jy.shape[2]))
@@ -106,6 +100,7 @@ def obs_effstim_image(data_Jy, mask=True):
 
         new_nirspec2[70:90, 50:60] = -10
         new_nirspec2[50:120, 5:25] = -10
+        new_nirspec2[40:50, 0:15] = -10
         new_nirspec2[0:80, 40:60] = -10
         new_nirspec2[0:15, 35:60] = -10
         new_nirspec2[60::, 50::] = -10

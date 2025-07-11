@@ -2,6 +2,20 @@ import numpy as np
 import pandas as pd
 
 
+def colors(location):
+    d = {'ne_oval':'#D81B60', 'sw_oval':'#FFC107' , 'clump':'#BF6D60' , 'clumpoff':'#1E88E5'}
+    return d[location]
+
+def photosphere():
+    dd = '/Users/sbetti/Documents/Science/DebrisDisks/betaPic/spectral_extraction_fitting_scripts/extraction/'
+    file=dd + 'betapic_R100_photosphere_thermalexcess.txt'
+    a = np.loadtxt(file) 
+    x, photosphere_y = a[:,0], a[:,1]
+    return x, photosphere_y
+    
+def wavelength_array():
+    return np.linspace(0.6025, 5.3025,941)[100:-5]
+
 ############ MCMC for CO2 center positions
 def log_prior(theta):
     h, c, w, log_f = theta

@@ -14,6 +14,7 @@ from astropy.modeling.models import BlackBody
 from photutils.aperture import CircularAperture, ApertureStats
 import pandas as pd
 
+from bpic_analysis.broaden import *
 
 def smooth_photosphere(file=None, add_thermal_excess=True):
     if file is None:
@@ -50,7 +51,7 @@ def smooth_photosphere(file=None, add_thermal_excess=True):
     return x, photosphere_y
 
 
-def radial_profile_NEWNOISE(data, inMod, residual, err, positions, direction='major', binsize=5, surbright=False, plot=True, ap_shape='circle'):
+def get_spectra(data, inMod, residual, err, positions, direction='major', binsize=5, surbright=False, plot=True, ap_shape='circle'):
     d = {}
     derr = {}
     tp = {}
@@ -87,7 +88,7 @@ def radial_profile_NEWNOISE(data, inMod, residual, err, positions, direction='ma
 
         TP = phot_table_outMOD.value/phot_table_inMOD.value
         d[wv] = phot_table_DATA.value
-        tp[wv] = TP.value
+        tp[wv] = TP
         derr[wv] = phot_table_RES#.value
 
     dict_pos = {}

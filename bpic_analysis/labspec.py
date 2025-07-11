@@ -8,7 +8,8 @@ from scipy import interpolate
 from scipy.optimize import curve_fit
 
 from scipy import optimize
-
+from bpic_analysis.broaden import *
+from bpic_analysis.optical_depth import *
 
 def smooth_labspec_special(x, y, X_wn=None):
     if X_wn is None:
@@ -75,7 +76,7 @@ def plot_labspec(ax, norm_df, icefeature, labspec_ices_path, labspec_colors, lab
                   ylabelerr='normalized Fdisk/Fstar err', **kwargs):
     
     wn_min, wn_max = ice_wn_bounds(icefeature)
-
+    linewidth = kwargs.get('linewidth', 1)
     fontsize = kwargs.get('fontsize', 12)
     xlim = kwargs.get('xlim', [wn_max, wn_min])
     ylim = kwargs.get('ylim', [-0.025, 1.5])
@@ -87,9 +88,9 @@ def plot_labspec(ax, norm_df, icefeature, labspec_ices_path, labspec_colors, lab
     norm_absorbance, norm_absorbancerr = measure_absorbance(norm_df, icefeature, normalize=True, yerr=True, plot=False, 
                                                             xlabel = xlabel, ylabel=ylabel, ylabelerr=ylabelerr)
 
-    ax.plot(X_wn, norm_absorbance, color='k', linewidth=3, label=data_leglabel)
-    ax.errorbar(X_wn, norm_absorbance, yerr=abs(norm_absorbancerr),fmt='none',
-                 color='k', alpha=0.1, capsize=2, lw=1)
+    ax.plot(X_wn, norm_absorbance, color='k', linewidth=linewidth+1, label=data_leglabel, ds='steps-post')
+    # ax.errorbar(X_wn, norm_absorbance, yerr=abs(norm_absorbancerr),fmt='none',
+    #              color='k', alpha=0.1, capsize=2, lw=1)
     
     for i, ice in enumerate(labspec_ices_path):
         dat = np.loadtxt(ice, comments='#')
@@ -112,16 +113,23 @@ def plot_labspec(ax, norm_df, icefeature, labspec_ices_path, labspec_colors, lab
         else:
             xsm, ysm = smooth_labspec_special(x, y)
 
-        ind = np.where((xsm>wn_min) & (xsm<wn_max))
-        IDXmod = np.max(ysm[ind])
-        ax.plot(xsm, ysm/IDXmod,  linestyle='-', color=labspec_colors[i], linewidth=2, alpha=1,label=labspec_leglabels[i])
+        ff = interpolate.interp1d(xsm, ysm, kind=3)
+        newx = np.linspace(np.min(xsm), np.max(xsm), 500)
+        newy = ff(newx)
+
+        ff = interpolate.interp1d(X_wn, norm_absorbance, kind=3)
+        newy_real = ff(newx)
+
+        ind = np.where((newx>wn_min) & (newx<wn_max))
+        IDXmod = np.max(newy[ind])
+
+        ax.plot(newx, newy/IDXmod,  linestyle='-', color=labspec_colors[i], linewidth=linewidth, alpha=1,label=labspec_leglabels[i])
         if labspec_residual:
             ind = np.where((x>wn_min) & (x<wn_max))
             IDXmod = np.max(y[ind])
             ax.plot(x, y/IDXmod,  linestyle='--', color=labspec_colors[i], linewidth=0.5, alpha=0.5)
 
-    axT = plot_top_wavelength_axis(ax, top_label=top_label, fontsize=fontsize)
-    plot_axes(ax, 'normalized reverse\noptical depth (τ)', xlabel='wavenumber (cm$^{-1}$)', fontsize=fontsize, xlim = xlim, ylim=ylim, legend=legend, legend_fontsize=legend_fontsize)
+    bplot.plot_axes(ax, 'Normalized optical depth (τ)', xlabel='Wavenumber (cm$^{-1}$)', fontsize=fontsize, xlim = xlim, ylim=ylim, legend=legend, legend_fontsize=legend_fontsize, top_label=top_label)
     return ax
               
 

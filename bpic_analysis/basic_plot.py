@@ -4,10 +4,14 @@ import matplotlib.pyplot as plt
 from photutils.aperture import CircularAperture, CircularAnnulus, EllipticalAperture
 import pyregion
 import glob as glob
+import matplotlib.patheffects as pe
 
-def plot_spectra(ax, df, offset=0, color='k', zorder=10, 
-                 xlabel='wavelength (um)', ylabel='normalized Fdisk/Fstar', ylabelerr='normalized Fdisk/Fstar err', leglabel=None):
-    ax.plot(df[xlabel], df[ylabel]+offset, lw=2, color = color, label=leglabel , zorder=zorder)
+def plot_spectra(ax, df, offset=0, color='k', zorder=10,
+                 xlabel='wavelength (um)', ylabel='normalized Fdisk/Fstar', ylabelerr='normalized Fdisk/Fstar err', leglabel=None, **kwargs):
+    linewidth = kwargs.get('linewidth', 1)
+    linestyle = kwargs.get('linestyle', '-')
+    
+    ax.plot(df[xlabel], df[ylabel]+offset, lw=linewidth, color = color, label=leglabel , zorder=zorder, linestyle=linestyle)
     ax.fill_between(df[xlabel], df[ylabel]+offset-df[ylabelerr], df[ylabel]+offset+df[ylabelerr], color = color, alpha=0.2, zorder=zorder-0.5)
 
 def plot_spectra_model(ax, df, offset=0, color='k', zorder=11, label=None, component1=False, component2=False,
@@ -15,6 +19,8 @@ def plot_spectra_model(ax, df, offset=0, color='k', zorder=11, label=None, compo
                          **kwargs):
     linewidth = kwargs.get('linewidth', 1)
     linestyle = kwargs.get('linestyle', '--')
+    label_component1 = kwargs.get('label_component1', 'component 1')
+    label_component2 = kwargs.get('label_component2', 'component 2')
     ax.plot(df[xlabel], df[ylabel] + offset, color=color, linestyle=linestyle, linewidth=linewidth, label=label, zorder=zorder)
 
     if component1:
@@ -23,6 +29,47 @@ def plot_spectra_model(ax, df, offset=0, color='k', zorder=11, label=None, compo
     if component2:
         label_component2 = kwargs.get('label_component2', None)
         ax.plot(df[xlabel], df[f'{ylabel} comp2'], color='k', linestyle='--', linewidth=0.95, label=label_component2, zorder=zorder)
+
+
+def plot_spectra_with_model(ax, df_data, df_model, data_color, df_co2model=None, comodel=False, offset=0, xlabel='wavelength (um)', ylabel='normalized Fdisk/Fstar', ylabelerr='normalized Fdisk/Fstar err', modxlabel='wavelength (um)', modylabel='normalized Fdisk', mod2ylabel='normalized Fdisk comp2', **kwargs):
+
+    linestyle = kwargs.get('linestyle', '-')
+    linewidth = kwargs.get('linewidth', 1)
+    
+    if comodel:
+        xx = df_data[xlabel].values 
+        yy = df_data[ylabel].values / 1e-14
+        yerr = df_data[ylabelerr].values / 1e-14
+        if df_model is not None:
+            Xmod = df_model[modxlabel]
+            Ymod = df_model[modylabel]/1e-14
+    else:
+        xx = df_data[xlabel].values[105:]
+        yy = df_data[ylabel].values[105:]
+        yerr = df_data[ylabelerr].values[105:]
+        if df_model is not None:
+            Xmod = df_model[modxlabel]
+            Ymod = df_model[modylabel]
+
+
+    if df_co2model is not None:
+        if df_model is not None:
+            Ymod2 = df_model[mod2ylabel]
+            Xmod_CO2 = df_co2model[modxlabel]
+            Ymod_CO2 = df_co2model[modylabel]
+            ax.plot(xx, yy+offset, lw=linewidth+0.5, color = data_color,  zorder=1)
+            ax.fill_between(xx, (yy-yerr)+offset, (yy+yerr)+offset, color = data_color, alpha=0.2)
+            IDX = np.where((xx>=np.min(Xmod_CO2)) & (xx<=np.max(Xmod_CO2)))
+            ymodel2 = Ymod2.values[IDX]
+            ax.plot(Xmod_CO2, (Ymod_CO2)+ymodel2+offset, lw=linewidth, zorder=1, color='k', linestyle=linestyle)
+                
+    else:
+        ax.plot(xx, yy+offset, lw=linewidth+0.5, color = data_color, zorder=1)
+        ax.fill_between(xx, (yy-yerr)+offset, (yy+yerr)+offset, color = data_color, alpha=0.2)
+        if df_model is not None:
+            ax.plot(Xmod, Ymod+offset, lw=linewidth, zorder=1, color='k', linestyle=linestyle)
+
+
 
 def plot_nircam_filters(ax, offset=0.25):
     filters = glob.glob('../JWST_NIRCam_transmissions/*.txt')
@@ -53,8 +100,7 @@ def plot_nircam_photometry(ax, df, offset=0, zorder=12, color='k', marker='D',
     ax.errorbar(df[xlabel], df[ylabel]+offset, yerr = yerr,
                     fmt='.', zorder=zorder-0.5, color='k', mec='k', capsize=3)
     
-def plot_axes(ax, ylabel, xlabel='wavelength (μm)', fontsize=14, xlim = [0.4, 5.5], ylim=[0.25, 2.25], legend=True, legend_fontsize=None):
-
+def plot_axes(ax, ylabel, xlabel='Wavelength (μm)', top_label=True, fontsize=14, xlim = [0.4, 5.5], ylim=[0.25, 2.25], legend=True, legend_fontsize=None, legend_loc = 'upper right'):
     if legend_fontsize is None:
         legend_fontsize = fontsize
     ax.set_xlabel(xlabel, fontsize=fontsize)
@@ -64,8 +110,19 @@ def plot_axes(ax, ylabel, xlabel='wavelength (μm)', fontsize=14, xlim = [0.4, 5
     ax.tick_params(which='major', direction='in', length=7, top=True, right=True, labelsize=fontsize)
     ax.tick_params(which='minor', direction='in', length=5, top=True, right=True, labelsize=fontsize)
     ax.minorticks_on()
+
     if legend:
-        ax.legend(loc='upper left', fontsize=legend_fontsize, frameon=True)
+        ax.legend(loc=legend_loc, fontsize=legend_fontsize, frameon=True)
+
+    if top_label:
+        ax.tick_params(which='both', top=False, labelsize=fontsize)
+        axT = ax.secondary_xaxis('top', functions=(forward, inverse))
+        if top_label:
+            axT.set_xlabel('Wavelength (μm)', fontsize=fontsize)
+        else:
+            axT.set_xticklabels([])
+        axT.tick_params(labelsize=fontsize)
+        return axT
 
 
 def forward(x):
@@ -74,30 +131,21 @@ def forward(x):
 def inverse(x):
     return 10000 / x
 
-def plot_top_wavelength_axis(ax, top_label=True, fontsize=14):
-    ax.tick_params(which='both', top=False)
-    axT = ax.secondary_xaxis('top', functions=(forward, inverse))
-    if top_label:
-        axT.set_xlabel('wavelength (μm)', fontsize=fontsize)
-    else:
-        axT.set_xticklabels([])
-    return axT
-
 def plot_image(ax, data, wv_slice='all', direction='vertical', colorbar=True, black_mask=True, **kwargs):
     vmin = kwargs.get('vmin', 0)
     vmax=  kwargs.get('vmax', 200000)
     cmap = kwargs.get('cmap', 'magma')
     cbar_label = kwargs.get('cbar_label', 'Flux')
+    cbar_dir = kwargs.get('cbar_dir', 'right')
     fs = kwargs.get('fs', 12)
     zorder= kwargs.get('zorder', 1)
-
     if len(data.shape) == 3:
         if wv_slice == 'all':
             coadd_data = np.nansum(data, axis=0)
         else:
             coadd_data = data[wv_slice,:,:]
 
-    coadd_data = np.nan_to_num(data)
+    coadd_data = np.nan_to_num(coadd_data)
     halfsize = np.asarray(coadd_data.shape) / 2 * 0.1
     extent = [-halfsize[1], halfsize[1], -halfsize[0], halfsize[0]]
     coadd_data[20:60, 41:50] = 0
@@ -105,10 +153,12 @@ def plot_image(ax, data, wv_slice='all', direction='vertical', colorbar=True, bl
     coadd_data[30:40, 0:10] = 0
     coadd_data[100:110, 10:17] = 0
     coadd_data[98::, 52::] = 0
-    im1 = ax.imshow(coadd_data, vmin=vmin, vmax=vmax, extent=extent,
+
+    im1 = ax.imshow(coadd_data.data, vmin=vmin, vmax=vmax, extent=extent,
             origin='lower', cmap=cmap,aspect='auto', zorder=zorder)
     if colorbar:
-        cbar = plt.colorbar(im1, ax=ax, orientation='vertical',  pad=0.03,
+        pad = 0 if cbar_dir == 'top' else 0.03
+        cbar = plt.colorbar(im1, ax=ax, location=cbar_dir,  pad=pad, 
              )
         cbar.ax.tick_params(labelsize=fs-1)
         cbar.set_label(label=cbar_label,size=fs-1)
@@ -153,12 +203,12 @@ def plot_image(ax, data, wv_slice='all', direction='vertical', colorbar=True, bl
         ax.tick_params(which='both', color='white', labelsize=fs)
         ax.minorticks_on()
 
-        ax.plot([-2.4399, -1.8999], [-4.3048+0.37399, -4.3048], color='white', markevery=[0], marker=(3,0,55), markersize=2, linewidth=0.5)#-4.6788, 
-        ax.plot([-1.8999, -1.4999], [-4.3048, -4.3048+0.4626], color='white', markevery=[-1], marker=(3,0,75), markersize=2, linewidth=0.5)#-4.7674, 
+        ax.plot([-2.4399, -1.8999], [-4.3048+0.37399, -4.3048], color='white', markevery=[0], marker=(3,0,55), markersize=2, linewidth=0.5)
+        ax.plot([-1.8999, -1.4999], [-4.3048, -4.3048+0.4626], color='white', markevery=[-1], marker=(3,0,75), markersize=2, linewidth=0.5)
         ax.text(-1.6, -3.7, 'N',  fontsize=6, color='white')
         ax.text(-2.6, -3.75, 'E', fontsize=6, color='white')
         ax.plot([-2.5, -1.5], [-5, -5], color='white', linewidth=0.75)
-        ax.text(-2., -5., '1"\n19.6 au', color='white', fontsize=6, va='center', ha='center')
+        ax.text(-2., -5.05, '1"\n19.6 au', color='white', fontsize=6, va='center', ha='center')
         ax.set_ylim(-6.6, 6.2)
         ax.set_xlim(-2.88,2.73)
         ###########
