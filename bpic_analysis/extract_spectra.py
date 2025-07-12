@@ -51,7 +51,7 @@ def smooth_photosphere(file=None, add_thermal_excess=True):
     return x, photosphere_y
 
 
-def get_spectra(data, inMod, residual, err, positions, direction='major', binsize=5, surbright=False, plot=True, ap_shape='circle'):
+def get_spectra(data, inMod, residual, err, positions, direction='major', binsize=5, surbright=False, plot=True, ap_shape='circle', savename=None):
     d = {}
     derr = {}
     tp = {}
@@ -148,9 +148,10 @@ def get_spectra(data, inMod, residual, err, positions, direction='major', binsiz
     df = pd.DataFrame(tp_fin)
     df2 = pd.DataFrame(tp_fin_sm)
     df3 = pd.DataFrame(tp_fin_std)
-    df.to_csv('tp_ovalNE_ovalSW.csv')
-    df2.to_csv('tp_ovalNE_ovalSW_avg.csv')
-    df3.to_csv('tp_ovalNE_ovalSW_std.csv')
+    if savename:
+        df.to_csv(f'{savename}.csv')
+        df2.to_csv(f'{savename}_avg.csv')
+        df3.to_csv(f'{savename}_std.csv')
     return dict_pos, dict_err_pos
 
 def contrast_diskflux(disk_flux, stellar_flux):

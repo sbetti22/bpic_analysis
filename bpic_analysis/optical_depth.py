@@ -66,6 +66,12 @@ def measure_optical_depth(norm_df, icefeature, yerr=True, plot=False, xlabel = '
                                         ((norm_df['wavelength (um)']> 4.405) & 
                                         (norm_df['wavelength (um)']< 4.5)) ]
         xmin, xmax = 4.3, 4.5
+    elif icefeature == 'CO':
+        continuum = norm_df.loc[((norm_df['wavelength (um)']> 4.6) & 
+                                        (norm_df['wavelength (um)']< 4.65)) | 
+                                        ((norm_df['wavelength (um)']> 4.7) & 
+                                        (norm_df['wavelength (um)']< 4.8)) ]
+        xmin, xmax = 4.6, 4.8
     z = np.polyfit(continuum['wavelength (um)'], continuum[ylabel],polyfitorder)
     p = np.poly1d(z)
     optical_depth = (-np.log(norm_df[ylabel]/p(norm_df[xlabel]))).values
@@ -127,6 +133,13 @@ def ice_gaussian_plot(ax, norm_df, icefeature, opdepth=True, skewedgaussian=True
         # A = 6.8e-17  #Bouilloud2015
         # A = 1.15e-16 #Brunken2024 from corrected Gerakines1995 from Bouilloud2015
         erridx = -2
+    elif icefeature == 'CO':
+        wn_min, wn_max = 2127, 2150
+        guassian_wn_min, gaussian_wn_max = 2127, 2150
+        left_wn_min, left_wn_max =2127,  2150
+        right_wn_min, right_wn_max =2127,  2150
+        erridx = -2
+        A = 1.1e-17
     else:
         raise ValueError('icefeature should be H2O, 12CO2, or 13CO2')
     
@@ -148,8 +161,12 @@ def ice_gaussian_plot(ax, norm_df, icefeature, opdepth=True, skewedgaussian=True
         IDX_gauss = np.where((X_wn > guassian_wn_min) & (X_wn<gaussian_wn_max)) 
         y = optical_depth[IDX_gauss]
         yerr = optical_depth_err[IDX_gauss]
+        w = 1/yerr
+        idx = np.where(np.isinf(w))
+        w[idx] = 0 
+
         params = model.guess(((np.nan_to_num(y))), x=X_wn[IDX_gauss])  
-        result = model.fit(((np.nan_to_num(y))), params, x=X_wn[IDX_gauss], weights=1./yerr, scale_covar=True)
+        result = model.fit(((np.nan_to_num(y))), params, x=X_wn[IDX_gauss], weights=w, scale_covar=True)
         result_err = result.eval_uncertainty()
         
         yeval = model.eval(result.params, x=X_wn[IDX_gauss])
@@ -230,14 +247,19 @@ def ice_gaussian_plot(ax, norm_df, icefeature, opdepth=True, skewedgaussian=True
         else:
             y = 1-(fin_data[IDX_gauss][::-1])
             yerr = fin_data_err[IDX_gauss][::-1]
+        w = 1/yerr
+        idx = np.where(np.isinf(w))
+        w[idx] = 0 
+        y[idx]= 0
+        yerr[idx] = 1
 
         params = model.guess(np.nan_to_num(y), x=X_wn[IDX_gauss])    # depending on the data you need to
-        result = model.fit(np.nan_to_num(y), params, x=X_wn[IDX_gauss],  weights=1./yerr, scale_covar=False)
+        result = model.fit(np.nan_to_num(y), params, x=X_wn[IDX_gauss], weights=w, scale_covar=False)
         result_err = result.eval_uncertainty()
         yeval = model.eval(result.params, x=X_wn[IDX_gauss])
+
         chi2 = np.nansum ( (y - yeval)**2. / yerr**2.) / (len(y)-5)
         print('chi2' , chi2) 
-        # print(result.fit_report())
         xx = np.linspace(wn_min, wn_max,100)
         yeval = model.eval(result.params, x=xx)
         ax.plot(xx, yeval, color=gaussian_color, zorder=100, linestyle='--')

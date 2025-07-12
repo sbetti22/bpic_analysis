@@ -107,8 +107,8 @@ def plot_axes(ax, ylabel, xlabel='Wavelength (μm)', top_label=True, fontsize=14
     ax.set_ylabel(ylabel, fontsize=fontsize)
     ax.set_ylim(ylim)
     ax.set_xlim(xlim)
-    ax.tick_params(which='major', direction='in', length=7, top=True, right=True, labelsize=fontsize)
-    ax.tick_params(which='minor', direction='in', length=5, top=True, right=True, labelsize=fontsize)
+    ax.tick_params(which='major', direction='in', top=True, right=True, labelsize=fontsize)
+    ax.tick_params(which='minor', direction='in', top=True, right=True, labelsize=fontsize)
     ax.minorticks_on()
 
     if legend:
@@ -144,6 +144,8 @@ def plot_image(ax, data, wv_slice='all', direction='vertical', colorbar=True, bl
             coadd_data = np.nansum(data, axis=0)
         else:
             coadd_data = data[wv_slice,:,:]
+    else:
+        coadd_data = data
 
     coadd_data = np.nan_to_num(coadd_data)
     halfsize = np.asarray(coadd_data.shape) / 2 * 0.1
