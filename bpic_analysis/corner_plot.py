@@ -132,7 +132,9 @@ def parse_data(fil, chi2_max=4):
         chi2 = chi2.loc[chi2 < chi2_max]
     return params, truths, data, chi2
 
-def print_acceptable_range_chi2(data, chi2, nu):
+def print_acceptable_range_chi2(fil, nu):
+    params, truths, data, chi2 = parse_data(fil, chi2_max=50)
+
     chi2_min = chi2.min()
     horline = chi2.min() + np.sqrt(2/nu)
    

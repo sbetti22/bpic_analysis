@@ -86,7 +86,7 @@ def plot_labspec(ax, norm_df, icefeature, labspec_ices_path, labspec_colors, lab
     X_wl = norm_df[xlabel].values
     X_wn = 1/(X_wl*u.um.to(u.cm))
     norm_absorbance, norm_absorbancerr = measure_absorbance(norm_df, icefeature, normalize=True, yerr=True, plot=False, 
-                                                            xlabel = xlabel, ylabel=ylabel, ylabelerr=ylabelerr)
+                                                            xlabel = xlabel, ylabel=ylabel, ylabelerr=ylabelerr, **kwargs)
 
     ax.plot(X_wn, norm_absorbance, color='k', linewidth=linewidth+1, label=data_leglabel, ds='steps-post')
     # ax.errorbar(X_wn, norm_absorbance, yerr=abs(norm_absorbancerr),fmt='none',

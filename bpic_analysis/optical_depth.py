@@ -43,29 +43,34 @@ def measure_absorbance(norm_df, icefeature, normalize=True, yerr=True, plot=Fals
 
 def measure_optical_depth(norm_df, icefeature, yerr=True, plot=False, xlabel = 'wavelength (um)', ylabel='normalized Fdisk/Fstar', ylabelerr='normalized Fdisk/Fstar err', **kwargs):
     ylims = kwargs.get('ylims', [0,1])
-    polyfitorder = kwargs.get('polyfitorder', 4)
+    polyfitorder = kwargs.get('polyfitorder', 3)
     print(polyfitorder)
     if icefeature == 'H2O':
         continuum = norm_df.loc[((norm_df[xlabel]> 2.0) & 
                                         (norm_df[xlabel]< 2.6)) | 
                                         ((norm_df[xlabel]> 3.4) & 
-                                        (norm_df[xlabel]< 3.6))]
-        xmin, xmax = 2, 4
+                                        (norm_df[xlabel]< 4.17))]
+        xmin, xmax = 2, 4.6
     elif icefeature == '12CO2':
-        continuum = norm_df.loc[((norm_df[xlabel]> 4) & 
-                                        (norm_df[xlabel]< 4.18)) | 
+        continuum = norm_df.loc[((norm_df[xlabel]> 2.0) & 
+                                        (norm_df[xlabel]< 2.6)) | 
+            ((norm_df[xlabel]> 3.4) & 
+                                        (norm_df[xlabel]< 3.9)) | 
                                         ((norm_df[xlabel]> 4.32) & 
                                         (norm_df[xlabel]< 4.34)) |
-                                        ((norm_df[xlabel]> 4.445) & 
-                                        (norm_df[xlabel]< 4.5))]
-        xmin, xmax = 4., 4.5
+                                        ((norm_df[xlabel]> 4.46) & 
+                                        (norm_df[xlabel]< 4.6))]
+        xmin, xmax = 2, 4.6
 
     elif icefeature == '13CO2':
-        continuum = norm_df.loc[((norm_df['wavelength (um)']> 4.3) & 
-                                        (norm_df['wavelength (um)']< 4.37)) | 
-                                        ((norm_df['wavelength (um)']> 4.405) & 
-                                        (norm_df['wavelength (um)']< 4.5)) ]
-        xmin, xmax = 4.3, 4.5
+        continuum = norm_df.loc[( 
+                                        (norm_df[xlabel]> 3.65) & 
+                                        (norm_df[xlabel]< 4.17)) | 
+                                        ((norm_df[xlabel]> 4.3) & 
+                                        (norm_df[xlabel]< 4.37)) |
+                                        ((norm_df[xlabel]> 4.46) & 
+                                        (norm_df[xlabel]< 4.6))]
+        xmin, xmax =4.1, 4.6
     elif icefeature == 'CO':
         continuum = norm_df.loc[((norm_df['wavelength (um)']> 4.6) & 
                                         (norm_df['wavelength (um)']< 4.65)) | 
@@ -76,14 +81,14 @@ def measure_optical_depth(norm_df, icefeature, yerr=True, plot=False, xlabel = '
     p = np.poly1d(z)
     optical_depth = (-np.log(norm_df[ylabel]/p(norm_df[xlabel]))).values
     if plot:
-        plt.figure()
-        plt.plot(norm_df[xlabel], norm_df[ylabel], 'k')
-        plt.plot(norm_df[xlabel], p(norm_df[xlabel]), 'r')
-        plt.xlabel('wavelength')
-        plt.ylabel('normalized Fdisk/Fstar')
-        plt.xlim(xmin, xmax)
-        plt.ylim(ylims)
-        plt.show()
+        fig, ax = plt.subplots(nrows=1,ncols=1)
+        ax.plot(norm_df[xlabel], norm_df[ylabel], 'k')
+        ax.plot(norm_df[xlabel], p(norm_df[xlabel]), 'r')
+        ax.set_xlabel('wavelength')
+        ax.set_ylabel('normalized Fdisk/Fstar')
+        ax.set_xlim(xmin, xmax)
+        ax.set_ylim(ylims)
+        fig.show()
 
     if yerr:
         optical_deptherr = (norm_df[ylabelerr]/(norm_df[ylabel])).values
@@ -99,6 +104,7 @@ def ice_gaussian_plot(ax, norm_df, icefeature, opdepth=True, skewedgaussian=True
     gaussian_color = kwargs.get('gaussian_color', 'r')
     fs = kwargs.get('fs', 12)
     ylim = kwargs.get('ylim', [0.3, -0.1])
+    optical_depth_plot = kwargs.get('optical_depth_plot')
 
 
     X_wv = norm_df['wavelength (um)'].values
@@ -117,7 +123,7 @@ def ice_gaussian_plot(ax, norm_df, icefeature, opdepth=True, skewedgaussian=True
         erridx = -5
     elif icefeature == '12CO2':       
         wn_min, wn_max = 2308, 2440
-        guassian_wn_min, gaussian_wn_max = 2300, 2440
+        guassian_wn_min, gaussian_wn_max = 2325, 2400
         left_wn_min, left_wn_max =2300,  2340
         right_wn_min, right_wn_max =2400,  2440
         A = 7.6e-17 #Gerakines1995
@@ -143,7 +149,7 @@ def ice_gaussian_plot(ax, norm_df, icefeature, opdepth=True, skewedgaussian=True
     else:
         raise ValueError('icefeature should be H2O, 12CO2, or 13CO2')
     
-    continuum, popt, optical_depth, optical_depth_err = measure_optical_depth(norm_df, icefeature, yerr=True, plot=False, xlabel=xlabel, ylabel=ylabel, ylabelerr = ylabelerr, **kwargs)
+    continuum, popt, optical_depth, optical_depth_err = measure_optical_depth(norm_df, icefeature, yerr=True, plot=optical_depth_plot, xlabel=xlabel, ylabel=ylabel, ylabelerr = ylabelerr, **kwargs)
     IDX = np.where((X_wn > wn_min) & (X_wn < wn_max))
 
     if opdepth:
@@ -176,7 +182,7 @@ def ice_gaussian_plot(ax, norm_df, icefeature, opdepth=True, skewedgaussian=True
         xx = np.linspace(wn_min, wn_max,100)
         yeval = model.eval(result.params, x=xx)
         ax.plot(xx, yeval, color=gaussian_color, zorder=100, linestyle='--')
-        print(result.fit_report())
+        # print(result.fit_report())
 
         a = result.params['gamma'].value
         ae = result.params['gamma'].stderr
@@ -189,7 +195,7 @@ def ice_gaussian_plot(ax, norm_df, icefeature, opdepth=True, skewedgaussian=True
         m = np.sqrt(2/np.pi) * delta - (1-(np.pi/4)) * ((np.sqrt(2/np.pi)*delta)**3/(1-(2/np.pi)*delta**2.)) - (np.sign(a) / 2 ) * np.exp(-(2*np.pi)/ abs(a))
         wm = w * m
         mode = c + wm
-        print(a, ae)
+        # print(a, ae)
         de = ( 1/ (1+a**2)**(3/2)) * ae
         Ae = np.sqrt(2/np.pi) * de
         Be = de * abs( ((np.pi-4) * (3*np.pi*delta**2. - 2*delta**4.)) / (np.sqrt(2*np.pi) * (np.pi - 2*delta**2.)**2.) )
@@ -293,7 +299,7 @@ def ice_gaussian_plot(ax, norm_df, icefeature, opdepth=True, skewedgaussian=True
     integrated_depth_mod = np.trapz(-result.best_fit, x=X_wn[IDX_gauss])
     if opdepth: 
         integrated_depth_data = np.trapz(-optical_depth[IDX_gauss], x = X_wn[IDX_gauss]) 
-        column_density = integrated_depth_mod / A 
+        column_density = integrated_depth_data / A 
         column_density_up = np.trapz(-(result.best_fit - result_err), x =X_wn[IDX_gauss])/ A
         column_density_err = -column_density_up + column_density
     else:

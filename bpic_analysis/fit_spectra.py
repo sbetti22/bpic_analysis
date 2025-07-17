@@ -23,7 +23,7 @@ import matplotlib.gridspec as gridspec
 
 
 from sympy.solvers import solve, nonlinsolve
-
+import mpmath
 from sympy import Symbol, nsolve
 from scipy.interpolate import interp1d
 from scipy import optimize
@@ -159,6 +159,8 @@ h2o_c20 = np.loadtxt(optical_constant_path + 'water_ice_Crystalline_20_Mastrapa_
 h2o_c40 = np.loadtxt(optical_constant_path + 'water_ice_Crystalline_40_Mastrapa_nk.txt' ,usecols=[0,1,2])
 
 compositions = {
+    'olivine':olivine,
+    'carbon':carbon_c,
     'H2O-A15':h2o_a15,
     'H2O-A25':h2o_a25,
     'H2O-A40':h2o_a40,
@@ -166,16 +168,22 @@ compositions = {
     'H2O-A60':h2o_a60,
     'H2O-A80':h2o_a80,
     'H2O-A100':h2o_a100, 
-    'H2O-A120':h2o_a120
+    'H2O-A120':h2o_a120,
+    'H2O-C20':h2o_c20,
+    'H2O-C40':h2o_c40
 }
 
 # compositions = {
 #     'H2O-C20':h2o_c20,
 #     'H2O-C40':h2o_c40}
-import mpmath
+
 ###################################################
-def make_model(x, f_comp1, COMPS, z_wave):
+def make_model(x, f_comp1, compnames, z_wave):
     inital_refracive_indices_guess = [3, 1] # for refractive indices > normally range between 1-3
+    COMPS = []
+    for i in compnames:
+        COMPS.append(compositions[i])
+
     scaling_factor, a_min, a_max, a_exp,porosity = x
 
     num_components = len(COMPS)
